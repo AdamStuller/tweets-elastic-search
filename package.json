@@ -1,0 +1,25 @@
+{
+  "name": "elastic",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AdamStuller/tweets-elastic-search.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AdamStuller/tweets-elastic-search/issues"
+  },
+  "homepage": "https://github.com/AdamStuller/tweets-elastic-search#readme",
+  "dependencies": {
+    "batch-stream": "^0.1.3",
+    "ndjson": "^2.0.0",
+    "pg": "^8.5.1",
+    "pg-query-stream": "^3.4.2"
+  }
+}
