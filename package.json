@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "import": "ts-node src/index"
+    "import": "ts-node src/index",
+    "start:elasticsearch": "docker-compose up -d"
   },
   "repository": {
     "type": "git",
