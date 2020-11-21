@@ -1,6 +1,6 @@
 const { Writable } = require("stream");
 
-const databaseWritable = (clientPromise) => (writeFn) =>
+const writable = (clientPromise) => (writeFn) =>
   new Writable({
     objectMode: true,
     write(chunk, encoding, callback) {

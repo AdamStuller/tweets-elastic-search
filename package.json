@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/AdamStuller/tweets-elastic-search#readme",
   "dependencies": {
+    "@elastic/elasticsearch": "^7.10.0",
     "batch-stream": "^0.1.3",
     "ndjson": "^2.0.0",
     "pg": "^8.5.1",

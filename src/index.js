@@ -3,8 +3,9 @@ const ndjson = require("ndjson");
 const { map, filter } = require("./util/transforms");
 const { initDatabaseReadable } = require("./util/readable");
 
+const { Client } = require("@elastic/elasticsearch");
+const fs = require("fs");
 const { connectDb } = require("./db");
-const { stdout } = require("process");
 
 const connection = connectDb({
   host: "localhost",
@@ -12,6 +13,14 @@ const connection = connectDb({
   user: "root",
   password: "qwerty",
   database: "tweets",
+});
+
+const updateTweet = ({ country, ...rest }) => ({
+  ...rest,
+  country: {
+    name: country == null ? null : country.name,
+    code: country == null ? null : country.code,
+  },
 });
 
 const queryString = `
@@ -27,24 +36,57 @@ WITH t_h AS (SELECT t.id AS tweet_id, array_agg(h.value) AS tags
                   JOIN accounts a on tm.account_id = a.id
          GROUP BY t.id
      )
-SELECT t.id as id,
-       content,
-       location,
-       retweet_count,
-       favorite_count,
-       happened_at,
-       author_id,
-       row_to_json(a.*) as author,
-       row_to_json(c.*) as country,  
-       t_h.tags         as tags,
-       t_m_a.tweet_mentions
+SELECT   t.id AS id,
+      content,
+      location,
+      retweet_count,
+      favorite_count,
+      happened_at,
+      row_to_json(a.*) AS author,
+      row_to_json(c.*) AS country,
+      t_h.tags         AS tags,
+      t_m_a.tweet_mentions
 FROM tweets t
-         join countries c on t.country_id = c.id
-         JOIN accounts a on t.author_id = a.id
-         JOIN t_h on t_h.tweet_id = t.id
-         JOIN t_m_a ON t_m_a.tweet_id = t.id;
+      LEFT JOIN countries c ON t.country_id = c.id
+      LEFT JOIN accounts a ON t.author_id = a.id
+      LEFT JOIN t_h ON t_h.tweet_id = t.id
+      LEFT JOIN t_m_a ON t_m_a.tweet_id = t.id;
 `;
 
-initDatabaseReadable(connection)(queryString).then((stream) => {
-  stream.pipe(ndjson.stringify()).pipe(stdout);
-});
+const simpleQuery = "SELECT * FROM tweets_nsql;";
+
+const client = new Client({ node: "http://localhost:9200" });
+
+const migrateToElastic = async () => {
+  const dataStream = await initDatabaseReadable(connection)(simpleQuery);
+  // const dataStream = await fs
+  //   .createReadStream("output.jsonl")
+  //   .pipe(ndjson.parse());
+
+  const sourceStream = dataStream
+    .pipe(map(updateTweet))
+    .pipe(ndjson.stringify());
+  // .pipe(process.stdout)
+
+  try {
+    const result = await client.helpers.bulk({
+      datasource: sourceStream,
+      onDocument(doc) {
+        return {
+          index: { _index: "tweets", _id: doc.id },
+        };
+      },
+      onDrop(doc) {
+        console.error(doc);
+      },
+      // flushBytes: 5000000,
+      concurrency: 1,
+    });
+
+    console.log(result);
+  } catch (error) {
+    console.error(JSON.stringify(error));
+  }
+};
+
+migrateToElastic();
